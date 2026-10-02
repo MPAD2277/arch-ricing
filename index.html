@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Arch Linux Ricing Journey</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
+    
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        :root {
+            --accent-cyan: #33ccff;
+            --accent-glow: rgba(51, 204, 255, 0.6);
+            --module-bg: #0f0f0f;
+            --module-border: #222222;
+            --module-text: #c0c0c0;
+        }
+
+        body {
+            /* 1. Set the background image strictly with cover size and no-repeat */
+            background: url('https://files.catbox.moe/0231jv.jpg') no-repeat center center fixed;
+            background-size: cover;
+            background-color: #050505; /* Fallback */
+            color: #e0e0e0;
+            overflow: hidden; /* Prevent body scroll */
+            height: 100vh;
+            width: 100vw;
+            font-family: 'JetBrains Mono', monospace;
+            margin: 0;
+            padding: 0;
+        }
+
+        .font-sans-text { font-family: 'Inter', sans-serif; }
+        
+        .text-cyan-neon {
+            color: var(--accent-cyan);
+            text-shadow: 0 0 8px var(--accent-glow);
+        }
+
+        /* 2. Top Bar: Resembles Waybar */
+        .waybar-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            padding: 4px 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 9999;
+            background: transparent;
+            user-select: none;
+        }
+        
+        .wb-module {
+            background-color: var(--module-bg);
+            border: 1px solid var(--module-border);
+            color: var(--module-text);
+            padding: 2px 11px;
+            margin: 2px 2px;
+            border-radius: 999px; /* Pill-shaped */
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 11px;
+            font-weight: 700;
+            transition: all 0.2s ease;
+        }
+        
+        .wb-module:hover {
+            color: #ffffff;
+            border-color: rgba(51, 204, 255, 0.4);
+        }
+
+        .wb-icon.active { color: #ffffff; }
+        .wb-icon { cursor: pointer; transition: color 0.2s; font-size: 12px; color: #888888;}
+        .wb-icon:hover { color: #ffffff; }
+
+        /* 3 & 4. Windows: Glassmorphism & Cyan borders */
+        .glass-window {
+            position: absolute;
+            background: rgba(15, 15, 15, 0.75);
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+            border: 1px solid rgba(51, 204, 255, 0.5);
+            border-radius: 5px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            max-height: 85vh;
+            transition: box-shadow 0.2s ease;
+        }
+
+        .glass-window.focus {
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.9), 0 0 15px rgba(51, 204, 255, 0.2);
+            border: 1px solid rgba(51, 204, 255, 0.8); /* Slightly brighter when focused */
+        }
+
+        .window-header {
+            background: rgba(0, 0, 0, 0.6);
+            padding: 8px 12px;
+            font-size: 12px;
+            font-weight: 700;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: grab;
+            border-bottom: 1px solid rgba(51, 204, 255, 0.3);
+            color: #94a3b8;
+            user-select: none;
+        }
+        
+        .window-header:active { cursor: grabbing; }
+        .window-header .title { display: flex; align-items: center; gap: 8px; }
+        .window-header .controls i { cursor: pointer; transition: color 0.2s; }
+        .window-header .controls i:hover { color: var(--accent-cyan); text-shadow: 0 0 5px var(--accent-glow);}
+
+        .window-body {
+            padding: 16px;
+            overflow-y: auto;
+            flex-grow: 1;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(51, 204, 255, 0.4); border-radius: 5px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--accent-cyan); }
+
+        /* Cava Visualizer Bars */
+        .visualizer {
+            display: flex;
+            align-items: flex-end;
+            gap: 6px;
+            height: 100px;
+            justify-content: center;
+            margin-top: 25px;
+            width: 100%;
+        }
+        .bar {
+            width: 16px;
+            background: var(--accent-cyan);
+            border-radius: 2px 2px 0 0;
+            transition: height 0.08s ease;
+            box-shadow: 0 0 8px rgba(51,204,255,0.4);
+        }
+
+        /* Article Typography (Window 3) */
+        .prose {
+            color: #e0e0e0; /* Light gray for readability */
+        }
+        .prose h1, .prose h2, .prose h3 {
+            color: #ffffff;
+            margin-bottom: 1rem;
+            margin-top: 1.5rem;
+            font-family: 'JetBrains Mono', monospace;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .prose h1::before { content: "❯"; color: var(--accent-cyan); text-shadow: 0 0 8px var(--accent-glow); }
+        .prose h2::before { content: "##"; color: var(--accent-cyan); }
+        .prose p {
+            margin-bottom: 1.25rem;
+            line-height: 1.6;
+        }
+        .prose code {
+            background: rgba(0,0,0,0.6);
+            color: var(--accent-cyan);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.9em;
+            font-family: 'JetBrains Mono', monospace;
+            border: 1px solid rgba(51,204,255,0.2);
+        }
+        .prose pre {
+            background: rgba(10, 10, 15, 0.9);
+            border: 1px solid var(--module-border);
+            padding: 16px;
+            border-radius: 5px;
+            overflow-x: auto;
+            margin-bottom: 1.5rem;
+            color: #a3b8cc;
+            font-size: 13px;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* Mobile Adjustments */
+        @media (max-width: 768px) {
+            body { overflow-y: auto; padding-top: 50px; }
+            #desktop { height: auto; display: flex; flex-direction: column; gap: 20px; padding: 10px; padding-bottom: 30px;}
+            .glass-window {
+                position: relative !important;
+                width: 100% !important;
+                max-width: 100% !important;
+                height: auto !important;
+                left: 0 !important;
+                top: 0 !important;
+                margin: 0;
+            }
+            .waybar-container { background: rgba(0,0,0,0.8); backdrop-filter: blur(10px); }
+        }
+    </style>
+</head>
+<body>
+
+    <nav class="waybar-container">
+        <!-- Left Modules (Workspaces, Window) -->
+        <div class="flex gap-1">
+            <div class="wb-module">
+                <span class="wb-icon"><i class="fa-solid fa-linux"></i></span>
+                <span class="wb-icon active"><i class="fa-regular fa-circle-dot"></i></span>
+                <span class="wb-icon"><i class="fa-solid fa-xmark"></i></span>
+                <span class="wb-icon"><i class="fa-solid fa-xmark"></i></span>
+            </div>
+            <div class="wb-module hidden sm:flex">
+                <span>(terminal)</span>
+            </div>
+        </div>
+
+        <!-- Center Module (Clock) -->
+        <div class="flex gap-1">
+            <div class="wb-module">
+                <span id="waybar-clock">00:00 WIB</span> <i class="fa-regular fa-clock ml-1"></i>
+            </div>
+        </div>
+
+        <!-- Right Modules (Hardware, Audio, Network, Battery) -->
+        <div class="flex gap-1">
+            <div class="wb-module hidden md:flex"><span>18%</span> <i class="fa-solid fa-microchip"></i></div>
+            <div class="wb-module hidden md:flex"><span>42%</span> <i class="fa-solid fa-memory"></i></div>
+            <div class="wb-module"><span>98%</span> <i class="fa-solid fa-volume-high"></i></div>
+            <div class="wb-module hidden lg:flex"><span>192.168.238.17</span> <i class="fa-solid fa-network-wired"></i></div>
+        </div>
+    </nav>
+
+    <main id="desktop" class="relative w-full h-full pt-12">
+
+        <!-- Window 1: Clock & Visualizer (cava style) -->
+        <div class="glass-window focus" id="win-visuals" style="top: 80px; left: 50px; width: 450px;">
+            <div class="window-header">
+                <div class="title"><span class="text-cyan-neon"><i class="fa-solid fa-wave-square"></i></span> cava_clock.sh</div>
+                <div class="controls"><i class="fa-solid fa-xmark" onclick="hideWindow('win-visuals')"></i></div>
+            </div>
+            <div class="window-body flex flex-col items-center justify-center p-8 bg-black/40">
+                <!-- Large TUI-style Clock -->
+                <div class="text-center w-full mt-4">
+                    <div id="big-clock" class="text-7xl font-extrabold text-cyan-neon tracking-widest mb-4 drop-shadow-[0_0_15px_rgba(51,204,255,0.6)]">11:06:32</div>
+                    <div class="text-base text-[#888888] font-sans-text uppercase tracking-[0.2em]" id="big-date">09/25/2026 • AM</div>
+                </div>
+                
+                <!-- Animated CSS Bars (Cava) -->
+                <div class="visualizer border-b border-gray-700 pb-1" id="cava-container">
+                    <!-- Bars injected via JS -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Window 2: System Info (Neofetch/Fastfetch) -->
+        <div class="glass-window" id="win-fetch" style="top: 80px; left: 520px; width: 650px;">
+            <div class="window-header">
+                <div class="title"><span class="text-cyan-neon"><i class="fa-solid fa-terminal"></i></span> fastfetch</div>
+                <div class="controls"><i class="fa-solid fa-xmark" onclick="hideWindow('win-fetch')"></i></div>
+            </div>
+            <div class="window-body p-6">
+                <div class="flex gap-6 text-base">
+                    <!-- Arch ASCII Logo in Cyan -->
+                    <div class="text-cyan-neon font-black leading-tight text-[13px] sm:text-[15px] select-none">
+<pre>
+       /\
+      /  \
+     /\   \
+    /      \
+   /   ,,   \
+  /   |  |   \
+ /_-''    ''-_\</pre>
+                    </div>
+                    
+                    <!-- System Info Text -->
+                    <div class="flex flex-col justify-center gap-2 text-[14px] sm:text-[15px]">
+                        <div class="text-white mb-2 border-b border-gray-700 pb-1 text-base">
+                            <span class="text-cyan-neon font-bold">putra</span>@<span class="text-cyan-neon font-bold">Flashd-Arch</span>
+                        </div>
+                        <div><span class="text-cyan-neon font-bold w-[85px] inline-block">OS:</span> Arch Linux x86_64</div>
+                        <div><span class="text-cyan-neon font-bold w-[85px] inline-block">Kernel:</span> Linux 7.2.4-arch1-2</div>
+                        <div><span class="text-cyan-neon font-bold w-[85px] inline-block">WM:</span> Hyprland 0.56.2 (Wayland)</div>
+                        <div><span class="text-cyan-neon font-bold w-[85px] inline-block">Uptime:</span> 34 mins</div>
+                        <div><span class="text-cyan-neon font-bold w-[85px] inline-block">CPU:</span> AMD Ryzen 3 PRO 2200G</div>
+                        <div><span class="text-cyan-neon font-bold w-[85px] inline-block">Memory:</span> 2.39 GiB / 5.69 GiB <span class="text-green-400">(42%)</span></div>
+                        <div><span class="text-cyan-neon font-bold w-[85px] inline-block">Disk (/):</span> 6.31 GiB / 41.11 GiB <span class="text-green-400">(15%)</span></div>
+                        
+                        <!-- Terminal Prompt Simulation -->
+                        <div class="mt-4 text-gray-400 text-base">
+                            <span class="text-green-400 font-bold">~</span> <span class="text-cyan-neon font-bold">❯</span> <span class="animate-pulse">_</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Window 3: My Ricing Journey -->
+        <div class="glass-window" id="win-journey" style="top: 180px; left: 120px; width: 1000px; max-width: 95vw; height: 75vh;">
+            <div class="window-header">
+                <div class="title"><span class="text-cyan-neon"><i class="fa-solid fa-book"></i></span> ricing_journey.md</div>
+                <div class="controls"><i class="fa-solid fa-xmark" onclick="hideWindow('win-journey')"></i></div>
+            </div>
+            <div class="window-body prose font-sans-text text-[16px] md:text-[17px] p-6 md:p-8">
+                <h1 class="text-4xl font-bold">Arch Linux Ricing Journey</h1>
+                
+                <p>
+                    Halo! Selamat datang di simulasi <i>desktop</i> gw. Website ini dibangun untuk menceritakan proses gw ngebangun <i>setup</i> Linux yang minimalis, <i>keyboard-centric</i>, tapi tetep keren dipandang. Semua berawal dari rasa penasaran nyoba <strong class="text-white">Arch Linux</strong> dan ngerakit lingkungan <i>desktop</i> dari nol pakai <strong class="text-white">Hyprland</strong>.
+                </p>
+
+                <!-- Showcasing the requested preview image -->
+                <h2>Desktop Showcase</h2>
+                <p>Ini adalah tampilan asli desktop gw yang lagi jalanin TTY-Clock, Btop (system monitor), dan Neofetch dengan *wallpaper* gelombang laut bernuansa gelap (Glassmorphism).</p>
+                <div class="my-6">
+                    <img src="https://files.catbox.moe/i1e89u.png" alt="Desktop Ricing Preview" class="w-full h-auto rounded-[5px] shadow-[0_4px_15px_rgba(51,204,255,0.2)] border border-[#222222] transition-transform hover:scale-[1.01] duration-300">
+                </div>
+
+                <h2>Konfigurasi Hyprland (Wayland)</h2>
+                <p>
+                    Hyprland ngasih performa Wayland yang super mulus dengan animasi yang <i>eye-candy</i>. Gw ngatur *gaps* dan efek *blur* transparan (seperti yang lu lihat di jendela website ini) langsung via <code>hyprland.lua</code>.
+                </p>
+
+                <pre><code>-- Mengatur efek Glassmorphism (Blur)
+hl.config({
+    decoration = {
+        rounding = 5,
+        active_opacity = 1.0,
+        inactive_opacity = 0.75,
+        
+        blur = {
+            enabled = true,
+            size = 5,      -- Ukuran blur
+            passes = 1,
+        },
+    }
+})</code></pre>
+
+                <h2>Pendekatan TUI / CLI</h2>
+                <p>
+                    Sebagai penganut sekte terminal, gw udah ninggalin GUI *File Manager* berat. Semuanya dibikin cepat, *keyboard-driven*, dan konsisten pakai aksen warna <span class="text-cyan-neon font-bold">Cyan</span> (<code>#33ccff</code>) biar <i>matching</i> banget sama *wallpaper* dan bikin mata nggak cepet lelah.
+                </p>
+                
+                <p class="mt-8 mb-2 text-center text-sm text-[#888888] font-mono pt-4 border-t border-[#222222]">
+                    [ End of file. Try dragging the windows around! ]
+                </p>
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+        // 1. Clock Logic
+        function updateTime() {
+            const now = new Date();
+            let h = now.getHours().toString().padStart(2, '0');
+            let m = now.getMinutes().toString().padStart(2, '0');
+            let s = now.getSeconds().toString().padStart(2, '0');
+            
+            // Waybar Clock
+            document.getElementById('waybar-clock').innerText = `${h}:${m} WIB`;
+            
+            // Big Widget Clock
+            document.getElementById('big-clock').innerText = `${h}:${m}:${s}`;
+            
+            // Date
+            const ampm = now.getHours() >= 12 ? 'PM' : 'AM';
+            let mo = (now.getMonth() + 1).toString().padStart(2, '0');
+            let d = now.getDate().toString().padStart(2, '0');
+            let y = now.getFullYear();
+            document.getElementById('big-date').innerText = `${mo}/${d}/${y} • ${ampm}`;
+        }
+        setInterval(updateTime, 1000);
+        updateTime();
+
+        // 2. Cava (Audio Visualizer) Simulation
+        const cavaContainer = document.getElementById('cava-container');
+        const numBars = 20; // Number of bars to display
+        
+        // Initialize bars
+        for(let i = 0; i < numBars; i++) {
+            let bar = document.createElement('div');
+            bar.className = 'bar';
+            bar.style.height = '10px';
+            cavaContainer.appendChild(bar);
+        }
+
+        // Animate bars randomly
+        setInterval(() => {
+            const bars = cavaContainer.children;
+            for(let i = 0; i < bars.length; i++) {
+                // Generate height between 15px and 90px
+                let randomHeight = Math.floor(Math.random() * 75) + 15;
+                // Make edges generally shorter for a curved/centered look
+                if (i < 4 || i > numBars - 5) {
+                    randomHeight = randomHeight * 0.5;
+                }
+                bars[i].style.height = `${randomHeight}px`;
+            }
+        }, 120);
+
+        // 3. Window Management (Drag & Z-Index)
+        const windows = document.querySelectorAll('.glass-window');
+        let highestZ = 10; // Starting z-index
+
+        windows.forEach(win => {
+            const header = win.querySelector('.window-header');
+            
+            // Z-index stacking: Bring to front logic
+            const bringToFront = () => {
+                windows.forEach(w => w.classList.remove('focus')); // Remove focus from all
+                win.classList.add('focus'); // Add focus to clicked
+                highestZ++;
+                win.style.zIndex = highestZ;
+            };
+
+            // Trigger bring to front on mouse down anywhere on the window
+            win.addEventListener('mousedown', bringToFront);
+            win.addEventListener('touchstart', bringToFront, {passive: true});
+
+            // Dragging Logic (For desktop screens)
+            if (window.innerWidth > 768) {
+                let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+                
+                header.onmousedown = (e) => {
+                    e.preventDefault();
+                    // Get mouse cursor position at startup
+                    pos3 = e.clientX;
+                    pos4 = e.clientY;
+                    document.onmouseup = closeDragElement;
+                    // Call function whenever cursor moves
+                    document.onmousemove = elementDrag;
+                };
+
+                function elementDrag(e) {
+                    e.preventDefault();
+                    // Calculate new cursor position
+                    pos1 = pos3 - e.clientX;
+                    pos2 = pos4 - e.clientY;
+                    pos3 = e.clientX;
+                    pos4 = e.clientY;
+                    
+                    let newTop = win.offsetTop - pos2;
+                    let newLeft = win.offsetLeft - pos1;
+                    
+                    // Prevent dragging underneath the top Waybar (approx 35px height)
+                    if (newTop < 35) newTop = 35; 
+                    
+                    // Set the element's new position
+                    win.style.top = newTop + "px";
+                    win.style.left = newLeft + "px";
+                }
+
+                function closeDragElement() {
+                    // Stop moving when mouse button is released
+                    document.onmouseup = null;
+                    document.onmousemove = null;
+                }
+            }
+        });
+
+        // Hide Window Function (Closing logic)
+        function hideWindow(id) {
+            const win = document.getElementById(id);
+            if(win) {
+                win.style.opacity = '0';
+                win.style.transform = 'scale(0.95)';
+                setTimeout(() => { win.style.display = 'none'; }, 200);
+            }
+        }
+    </script>
+</body>
+</html>
